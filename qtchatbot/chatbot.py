@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QTextEdit, QPushButton, QLabel, QFrame, QScrollArea, QSizePolicy,
-    QStatusBar, QSplitter
+    QStatusBar, QSplitter, QCheckBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer, QMutex
 from PyQt6.QtGui import QFont, QKeyEvent, QIcon, QPixmap
@@ -246,6 +246,10 @@ class ChatbotWindow(QMainWindow):
         self.current_worker: Optional[ChatWorker] = None
         self.current_message_widget: Optional[MessageWidget] = None
         
+        # Track tool message containers for show/hide functionality
+        self.tool_message_containers: List[QWidget] = []
+        self.show_tool_messages = True
+        
         self.init_ui()
         self.init_status_bar()
         
@@ -410,6 +414,33 @@ Ask me about your HPC cluster - I can check partitions, view your jobs, and more
         self.input_field.keyPressEvent = self._input_key_press
         layout.addWidget(self.input_field, 1)
         
+        # Show tool messages checkbox
+        self.show_tools_checkbox = QCheckBox("Show system")
+        self.show_tools_checkbox.setChecked(True)
+        self.show_tools_checkbox.setFont(QFont("Monospace", 9))
+        self.show_tools_checkbox.setStyleSheet("""
+            QCheckBox {
+                color: #94a3b8;
+                spacing: 5px;
+            }
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
+                border: 2px solid #475569;
+                border-radius: 4px;
+                background: #0f172a;
+            }
+            QCheckBox::indicator:checked {
+                background: #f59e0b;
+                border-color: #f59e0b;
+            }
+            QCheckBox::indicator:hover {
+                border-color: #f59e0b;
+            }
+        """)
+        self.show_tools_checkbox.stateChanged.connect(self._toggle_tool_messages)
+        layout.addWidget(self.show_tools_checkbox)
+        
         # Send button
         self.send_button = QPushButton("Send")
         self.send_button.setFixedSize(70, 36)
@@ -467,6 +498,17 @@ Ask me about your HPC cluster - I can check partitions, view your jobs, and more
                 return
         else:
             QTextEdit.keyPressEvent(self.input_field, event)
+    
+    def _toggle_tool_messages(self, state: int):
+        """Toggle visibility of tool/system messages."""
+        self.show_tool_messages = (state == Qt.CheckState.Checked.value)
+        
+        # Update visibility of all tracked tool message containers
+        for container in self.tool_message_containers:
+            container.setVisible(self.show_tool_messages)
+        
+        # Scroll to maintain position
+        QTimer.singleShot(50, self._scroll_to_bottom)
     
     def send_message(self):
         """Send a message."""
@@ -563,6 +605,11 @@ Ask me about your HPC cluster - I can check partitions, view your jobs, and more
         """Handle tool call detection."""
         tool_msg = MessageWidget(f"🔧 Executing tool: {tool_name}...", role="tool")
         container = self._wrap_message(tool_msg, "tool")
+        
+        # Track tool message container and set initial visibility
+        self.tool_message_containers.append(container)
+        container.setVisible(self.show_tool_messages)
+        
         self.chat_layout.insertWidget(self.message_insert_index, container)
         self.message_insert_index += 1
         self._scroll_to_bottom()
@@ -580,13 +627,18 @@ Ask me about your HPC cluster - I can check partitions, view your jobs, and more
         
         result_msg = MessageWidget(f"📋 {tool_name} result:\n{formatted}", role="tool")
         container = self._wrap_message(result_msg, "tool")
+        
+        # Track tool message container and set initial visibility
+        self.tool_message_containers.append(container)
+        container.setVisible(self.show_tool_messages)
+        
         self.chat_layout.insertWidget(self.message_insert_index, container)
         self.message_insert_index += 1
         
         # Create new assistant message widget for the interpretation
         self.current_message_widget = MessageWidget("", role="assistant")
-        container = self._wrap_message(self.current_message_widget, "assistant")
-        self.chat_layout.insertWidget(self.message_insert_index, container)
+        assistant_container = self._wrap_message(self.current_message_widget, "assistant")
+        self.chat_layout.insertWidget(self.message_insert_index, assistant_container)
         self.message_insert_index += 1
         
         self._scroll_to_bottom()
