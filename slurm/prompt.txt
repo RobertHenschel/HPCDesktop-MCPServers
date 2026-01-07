@@ -1,0 +1,2 @@
+Within /slurm, write an MCP that exposes one function called "list_partitions". It uses the slurm command line binaries to list all available partitions and returns them. Use python to write the MCP and create a requirements.txt in the directory as well.
+Now add a 2nd function to the slurm MCP server called get_my_jobs that returns all jobs of the current user. Only return jobs that are either running or pending, not jobs that have already finished.

@@ -1,0 +1,4 @@
+Now write a python qt app in the root directory that when run, shows all MCP servers and all "functions" they expose. The app knows about the MCP servers by parsing a json file that is located in teh same directory called available_mcps.json. Create that as well and put the slurm mcp in there. Designate the mcp by the python file to account for the possibility to have multipe mcp server per directory.
+Also create a requirements.txt in the root.
+Make the application icon ./Cray-1-AI.png. That is the icon that shows up when the user switches between apps using ALT-Tab in MATE.
+Add a button to the app that allows execution of that function and shows the result in a new modal window.

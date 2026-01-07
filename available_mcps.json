@@ -1,0 +1,10 @@
+{
+  "mcps": [
+    {
+      "name": "Slurm",
+      "description": "MCP server for Slurm workload manager",
+      "path": "slurm/server.py"
+    }
+  ]
+}
+
