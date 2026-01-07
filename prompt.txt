@@ -2,3 +2,12 @@ Now write a python qt app in the root directory that when run, shows all MCP ser
 Also create a requirements.txt in the root.
 Make the application icon ./Cray-1-AI.png. That is the icon that shows up when the user switches between apps using ALT-Tab in MATE.
 Add a button to the app that allows execution of that function and shows the result in a new modal window.
+
+======= Chatbot =======
+Create a chatbot, by using the credentials available in config.dat.
+Use python and qt again and give the chatbot access to all mcps that are listed
+in available_mcps.json.
+Do this work in the already available directory called qtchatbot.
+Externalize important prompts that you are setting, like the system prompt.
+So that I can easier edit those. 
+Also create a requirements.txt file in that subdirectory
