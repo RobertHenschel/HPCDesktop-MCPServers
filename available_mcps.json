@@ -4,6 +4,11 @@
       "name": "Slurm",
       "description": "MCP server for Slurm workload manager",
       "path": "slurm/server.py"
+    },
+    {
+      "name": "Quota",
+      "description": "MCP server for disk quota information",
+      "path": "quota/server.py"
     }
   ]
 }

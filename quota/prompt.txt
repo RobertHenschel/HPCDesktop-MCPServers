@@ -1,0 +1,5 @@
+Use the already existing directory "quota" to write a quota mcp server.
+The server should use the commandline tool "quota". You can run it and see the output.
+Explain when the user asks what difference is between storage quota and file quota.
+Make sure the mcp works and is enabled in mcp_viewer.py.
+For now, don't bother about integrating it into the QT chatbot.
