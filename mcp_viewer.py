@@ -394,12 +394,13 @@ class MCPViewerWindow(QMainWindow):
         splitter.addWidget(details_widget)
         splitter.setSizes([400, 500])
         
-        main_layout.addWidget(splitter)
+        # Add splitter with stretch factor 1 so it expands to fill available space
+        main_layout.addWidget(splitter, 1)
         
-        # Status bar
+        # Status bar (stretch factor 0 - fixed size)
         self.status_label = QLabel()
         self.status_label.setStyleSheet("color: #7f8c8d; font-size: 11px;")
-        main_layout.addWidget(self.status_label)
+        main_layout.addWidget(self.status_label, 0)
     
     def load_mcps(self):
         """Load MCP servers from the JSON configuration file."""
