@@ -24,9 +24,22 @@ class LLMResponse:
 class LLMClient:
     """Client for RealLMS API with prompt-based tool calling support."""
     
-    # Pattern to match tool call blocks (handles tool_call, tool_calls, json variations)
-    TOOL_CALL_PATTERN = re.compile(
+    # Pattern to match tool call blocks wrapped in backticks
+    TOOL_CALL_BACKTICK_PATTERN = re.compile(
         r'```(?:tool_calls?|json)?\s*\n?\s*(\{[^`]*?"tool"\s*:\s*"[^"]+?"[^`]*?\})\s*\n?```',
+        re.DOTALL
+    )
+    
+    # Pattern to match raw JSON tool calls (without backticks)
+    # Matches {"tool": "...", "arguments": {...}} possibly spanning multiple lines
+    TOOL_CALL_RAW_PATTERN = re.compile(
+        r'\{\s*"tool"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]*\}|\[\])\s*\}',
+        re.DOTALL
+    )
+    
+    # Alternative pattern for when arguments comes first
+    TOOL_CALL_RAW_ALT_PATTERN = re.compile(
+        r'\{\s*"arguments"\s*:\s*(\{[^}]*\}|\[\])\s*,\s*"tool"\s*:\s*"([^"]+)"\s*\}',
         re.DOTALL
     )
     
@@ -51,14 +64,16 @@ class LLMClient:
         """
         Parse tool call blocks from response content.
         
-        Looks for blocks like:
-        ```tool_call
-        {"tool": "tool_name", "arguments": {}}
-        ```
+        Handles multiple formats:
+        1. Wrapped in backticks: ```tool_call {"tool": "...", "arguments": {}} ```
+        2. Raw JSON: {"tool": "...", "arguments": {}}
+        3. Alternative order: {"arguments": {}, "tool": "..."}
         """
         tool_calls = []
+        found_tools = set()  # Avoid duplicates
         
-        for match in self.TOOL_CALL_PATTERN.finditer(content):
+        # Method 1: Try backtick-wrapped format first (most explicit)
+        for match in self.TOOL_CALL_BACKTICK_PATTERN.finditer(content):
             try:
                 json_str = match.group(1)
                 data = json.loads(json_str)
@@ -66,13 +81,65 @@ class LLMClient:
                 tool_name = data.get('tool')
                 arguments = data.get('arguments', {})
                 
-                if tool_name:
+                if tool_name and tool_name not in found_tools:
                     tool_calls.append(ToolCall(
                         name=tool_name,
                         arguments=arguments if isinstance(arguments, dict) else {}
                     ))
+                    found_tools.add(tool_name)
             except json.JSONDecodeError:
                 continue
+        
+        # Method 2: Try raw JSON pattern {"tool": "...", "arguments": {...}}
+        for match in self.TOOL_CALL_RAW_PATTERN.finditer(content):
+            try:
+                tool_name = match.group(1)
+                args_str = match.group(2)
+                arguments = json.loads(args_str)
+                
+                if tool_name and tool_name not in found_tools:
+                    tool_calls.append(ToolCall(
+                        name=tool_name,
+                        arguments=arguments if isinstance(arguments, dict) else {}
+                    ))
+                    found_tools.add(tool_name)
+            except json.JSONDecodeError:
+                continue
+        
+        # Method 3: Try alternative order {"arguments": {...}, "tool": "..."}
+        for match in self.TOOL_CALL_RAW_ALT_PATTERN.finditer(content):
+            try:
+                args_str = match.group(1)
+                tool_name = match.group(2)
+                arguments = json.loads(args_str)
+                
+                if tool_name and tool_name not in found_tools:
+                    tool_calls.append(ToolCall(
+                        name=tool_name,
+                        arguments=arguments if isinstance(arguments, dict) else {}
+                    ))
+                    found_tools.add(tool_name)
+            except json.JSONDecodeError:
+                continue
+        
+        # Method 4: Fallback - try to find any JSON object with "tool" key
+        if not tool_calls:
+            # Look for any JSON-like structure with "tool" in it
+            json_pattern = re.compile(r'\{[^{}]*"tool"[^{}]*\}')
+            for match in json_pattern.finditer(content):
+                try:
+                    data = json.loads(match.group(0))
+                    tool_name = data.get('tool')
+                    arguments = data.get('arguments', {})
+                    
+                    if tool_name and tool_name not in found_tools:
+                        tool_calls.append(ToolCall(
+                            name=tool_name,
+                            arguments=arguments if isinstance(arguments, dict) else {}
+                        ))
+                        found_tools.add(tool_name)
+                except json.JSONDecodeError:
+                    continue
         
         return tool_calls
     

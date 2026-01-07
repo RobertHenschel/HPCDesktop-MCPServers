@@ -1,3 +1,4 @@
-slurm/__pycache__/server.cpython-311.pyc
+slurm/__pycache__/*
 config.dat
-quota/__pycache__/server.cpython-311.pyc
+quota/__pycache__/*
+qtchatbot/__pycache__/*
